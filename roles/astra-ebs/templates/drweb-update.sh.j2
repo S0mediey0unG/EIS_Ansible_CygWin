@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+#
+systemctl stop drweb-configd.service
+mount -t cifs {{ PATH_TO_VIRUS_BASES }} {{ MOUNT_POINT_FOR_VIRUS_BASES }} -o credentials=/root/UserLogon/UserLogon.txt
+7z e {{ MOUNT_POINT_FOR_VIRUS_BASES }}* -o/var/opt/drweb.com/bases
+umount {{ MOUNT_POINT_FOR_VIRUS_BASES }} 
+systemctl start drweb-configd.service

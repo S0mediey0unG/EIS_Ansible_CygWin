@@ -1,0 +1,9 @@
+---
+- name:   Check ports EBS, ESIA and SMEV from Astra-EBS
+  hosts:  TrustGate
+  become: yes
+
+
+  roles:
+    - astra-tests-ebs
+

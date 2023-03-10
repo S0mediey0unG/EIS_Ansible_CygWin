@@ -1,0 +1,9 @@
+---
+- name:   Check ports EBS, ESIA and SMEV from Astra-EBS
+  hosts:  NGINX_LINUX_SRV
+  become: yes
+
+
+  roles:
+    - nginx_reverse_proxy_crl
+

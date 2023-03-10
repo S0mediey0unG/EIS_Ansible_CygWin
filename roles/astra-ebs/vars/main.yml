@@ -1,0 +1,23 @@
+---
+
+############################### NTP ###############################
+
+NTP_SERVER_IP_ADDRESS:        1.1.1.1 # name or address for ntp server
+NTP_SERVER_IP_ADDRESS_RESERV: None # name or address for reserv ntp server
+
+############################### SYSTEM UPGRADE ###############################
+
+NAME_ISO_UPDATE_FILE: repository-update-bin.iso # name for update file into "astra-ebs/files"
+
+############################### TRUSTGATE ###############################
+
+TRUSTGATE_ZIP_FILE_NAME: g2g_ng_dist-799_2.33.4_3890.zip # name for TrustGate zip archive file g2g_ng_dist-799_2.33.4_3890.zip, g2g_ng_dist-705_2.30_3678.zip
+
+############################### DRWEB ###############################
+
+DRWEB_RUN_FILE_NAME: drweb-workstations_11.1.0-1905132145+fstek~linux_amd64.run # name for DrWeb installer file
+PATH_TO_VIRUS_BASES: //192.168.1.222/path/on/server/to/bases/ # SMB share on remote server
+MOUNT_POINT_FOR_VIRUS_BASES: /path/to/mount/point/* # mounte point with virus bases on local server
+SMB_USERNAME: drweb_update_user # credentials for SMB 
+SMB_PASSWORD: drweb_update_password # credentials for SMB
+
