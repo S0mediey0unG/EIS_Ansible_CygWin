@@ -1,0 +1,10 @@
+---
+# vars file for astra-tests-ebs
+files_to_copy:
+      - check_py.txt
+      - iit_signer_status.txt
+      - docker_ps.txt
+      - jr_tg_failover.txt
+      - pg_control.txt
+      - list_queues.txt
+      - rsync.log

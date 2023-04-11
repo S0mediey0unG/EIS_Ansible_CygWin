@@ -1,0 +1,191 @@
+---
+# tasks file for astra-ebs
+
+  - name: Enabled SSH Service
+    service:
+      name: ssh
+      enabled: yes
+
+  - name: Creates directory /iitrust/iso for copy update image
+    file:
+      path:  /iitrust/iso
+      state: directory
+
+  - name: Creates directory /iitrust/iso_m for mount repo
+    file:
+      path:  /iitrust/iso_m
+      state: directory
+
+
+  - name: Copy Update {{ NAME_ISO_UPDATE_FILE }} to Astra
+    copy:
+      src:  "{{ NAME_ISO_UPDATE_FILE }}"
+      dest: /iitrust/iso
+      mode: 0777
+
+  - name: mount repo
+    mount:
+      src:     /iitrust/iso/{{ NAME_ISO_UPDATE_FILE }}
+      path:    /iitrust/iso_m
+      fstype:  iso9660
+      opts:    ro
+      state:   mounted
+
+  - name: Add specified repository into sources list
+    template:
+      src: sources.list.j2 
+      dest: /etc/apt/sources.list
+
+
+  - name: Update repository chache
+    apt:
+      update_cache: yes
+
+  - name: Upgrade the OS
+    apt:
+      upgrade: yes
+
+
+  - name: install and update Core Linux linux-5.10
+    apt:
+      name:  linux-5.10
+      state: latest
+
+  - name: Remove older core linux-4.15
+    apt:
+      pkg:
+      -      linux-4.15*
+      -      linux-image-4.15*
+      -      linux-headers-4.15*
+      state: absent
+
+  - name:     Update GRUB
+    shell:    update-grub2
+    register: results
+
+  - name: --- GRUB DEBUG ---
+    debug:
+      var: results.stderr_lines
+
+
+  - name: Checking the installed Cifs, ntp and Zip-Archiver
+    apt:
+     pkg:
+     -      zip
+     -      cifs-utils
+     -      ntpdate
+     -      ntp
+     -      wget 
+     -      curl
+     state: latest
+
+
+  - name: umonte repo
+    mount:
+      path:  /home/{{ ansible_env.SUDO_USER }}/iso_m
+      state: unmounted
+
+  - name: Creates main directory "/iitrust"
+    file:
+      path:  /iitrust
+      state: directory
+
+
+  - name: Creates directory "/home/{{ ansible_env.SUDO_USER }}/TrustGate_versions"
+    file:
+      path:  /iitrust/TrustGate_versions
+      state: directory
+
+  - name: Copy TrustGate Archive {{ TRUSTGATE_ZIP_FILE_NAME }}
+    copy:
+      src:  "{{ TRUSTGATE_ZIP_FILE_NAME }}"
+      dest: /iitrust/TrustGate_versions
+      mode: 0777
+
+  - name: Creates directory "distr"
+    file:
+      path:  /iitrust/distr
+      state: directory
+
+  - name: UnZip TrustGate archive
+    unarchive:
+      src:         /iitrust/TrustGate_versions/{{ TRUSTGATE_ZIP_FILE_NAME }}
+      dest:        /iitrust/distr
+      remote_src:  yes
+
+  - name: Creates directory "/iitrust/drweb"
+    file:
+      path:  /iitrust/drweb
+      state: directory
+
+  - name: Copy drweb.run
+    copy:
+      src: "{{ DRWEB_RUN_FILE_NAME }}"
+      dest: /iitrust/drweb
+      mode: 0777
+
+  - name: Copy scripts for DrWeb
+    copy:
+      src: "{{ item }}"
+      dest: /iitrust/drweb
+    with_items:
+        - "bootscan-drweb.sh"
+        - "dscan-drweb.sh"
+
+  - name: Generate drweb-update.sh
+    template:
+      src:  drweb-update.sh.j2
+      dest: /iitrust/drweb/drweb-update.sh
+      mode: 0555
+
+  - name: CRONTAB for drweb-update.sh
+    cron:
+      name: "DrWeb update bases"
+      minute: "0"
+      hour: "6"
+      job: "/iitrust/drweb/drweb-update.sh"
+
+  - name: CRONTAB for bootscan-drweb.sh
+    cron:
+      name: "DrWeb bootscan"
+      minute: "0"
+      hour: "23"
+      job: "/iitrust/drweb/bootscan-drweb.sh"
+
+  - name: CRONTAB for dscan-drweb.sh
+    cron:
+      name: "DrWeb dscan"
+      minute: "0"
+      hour: "22"
+      job: "/iitrust/drweb/dscan-drweb.sh"
+
+  - name:     Crontab tasks check
+    shell:    crontab -l
+    register: results
+
+  - name: --- CRONTAB DEBUG ---
+    debug:
+      var: results.stdout_lines
+
+  - name: Generate UserLogon file
+    template:
+      src:    UserLogon.j2
+      dest:   /root/.UserLogon.txt
+      mode:   0555
+
+  - name: Generate ntp.conf
+    template:
+      src:    ntp.conf.j2
+      dest:   /etc/ntp.conf
+      mode:   0555
+
+  - name: Enabled and restart NTP Service
+    service:
+      name:    ntp
+      state:   restarted
+      enabled: yes
+
+  - name: Reboot server
+    reboot:
+      reboot_timeout: 3600
+

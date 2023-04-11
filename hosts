@@ -1,0 +1,28 @@
+[TrustGate:vars]
+ansible_ssh_private_key_file=/EIS_Ansible_CygWin/ssh_key/id_rsa
+ansible_user=iit
+
+[TrustGate]
+astra ansible_host=10.11.11.71
+astra ansible_port=2233
+
+[NGINX_WINDOWS_SRV:vars]
+remote_tmp="C:\Users\{{ LOGNAME }}\tmp"
+become_method= runas
+ansible_shell_type= powershell
+shell_type= powershell
+ansible_ssh_private_key_file=/home/mobaxterm/.ssh/id_rsa
+ansible_user=hsm
+
+[NGINX_WINDOWS_SRV]
+win_nginx ansible_host=192.168.23.132
+
+
+[NGINX_LINUX_SRV:vars]
+ansible_user=hsm
+ansible_ssh_private_key_file=/home/mobaxterm/.ssh/id_rsa
+
+[NGINX_LINUX_SRV]
+nginx ansible_host=192.168.23.150 
+
+
