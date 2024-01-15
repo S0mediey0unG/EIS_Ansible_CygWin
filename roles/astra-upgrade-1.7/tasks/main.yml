@@ -1,0 +1,68 @@
+---
+# tasks file for astra-upgrade
+
+  - name: Enabled SSH Service
+    service:
+      name: ssh
+      enabled: yes
+
+  - name: Creates directory /home/{{ ansible_env.SUDO_USER }}/iso for copy update image
+    file:
+      path:  /home/{{ ansible_env.SUDO_USER }}/iso
+      state: directory
+
+  - name: Creates directory /home/{{ ansible_env.SUDO_USER }}/iso_m for mount repo
+    file:
+      path:  /home/{{ ansible_env.SUDO_USER }}/iso_m
+      state: directory
+
+  - name: Copy Update {{ NAME_ISO_UPDATE_FILE }} to Astra
+    copy:
+      src:  "{{ NAME_ISO_UPDATE_FILE }}"
+      dest: /home/{{ ansible_env.SUDO_USER }}/iso
+      mode: 0777
+
+  - name: Copy OC iso-image {{ NAME_ISO_OC_FILE }} to Astra
+    copy:
+      src:  "{{ NAME_ISO_OC_FILE }}"
+      dest: /home/{{ ansible_env.SUDO_USER }}/iso
+      mode: 0777
+
+  - name: Add specified repository into sources list
+    template:
+      src: sources.list.j2 # deb file:///home/{{ ansible_env.SUDO_USER }}/iso_m smolensk contrib main non-free
+      dest: /etc/apt/sources.list
+
+  - name: mount repo OS iso-image
+    command: mount /home/{{ ansible_env.SUDO_USER }}/iso/{{ NAME_ISO_OC_FILE }} /media/cdrom0/
+      
+
+  - name: Update Cache
+    apt:
+      update_cache: yes
+
+  - name: mount repo update
+    mount:
+      src:     /home/{{ ansible_env.SUDO_USER }}/iso/{{ NAME_ISO_UPDATE_FILE }}
+      path:    /home/{{ ansible_env.SUDO_USER }}/iso_m
+      fstype:  iso9660
+      opts:    ro
+      state:   mounted
+
+  - name: Upgrade the OS
+    apt:
+      update_cache: yes
+
+  - name: Upgrade the OS
+    apt:
+      upgrade: yes
+  
+  - name: unmount repo
+    mount:
+      path:    /home/{{ ansible_env.SUDO_USER }}/iso_m
+      state:   unmounted
+
+  - name: unmount repo OS iso-image
+    mount:
+      path:    /media/cdrom0/
+      state:   unmounted

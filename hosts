@@ -3,8 +3,11 @@ ansible_ssh_private_key_file=/EIS_Ansible_CygWin/ssh_key/id_rsa
 ansible_user=iit
 
 [TrustGate]
-astra ansible_host=10.11.11.71
-astra ansible_port=2233
+#astraPH1 ansible_host=192.168.101.3
+#astraPH1_postgress ansible_host=192.168.101.5 
+#astraKSH37 ansible_host=192.168.102.3
+#astraKSH37_postgress ansible_host=192.168.102.5
+test ansible_host=192.168.64.5
 
 [NGINX_WINDOWS_SRV:vars]
 remote_tmp="C:\Users\{{ LOGNAME }}\tmp"
@@ -23,6 +26,11 @@ ansible_user=hsm
 ansible_ssh_private_key_file=/home/mobaxterm/.ssh/id_rsa
 
 [NGINX_LINUX_SRV]
-nginx ansible_host=192.168.23.150 
+nginx ansible_host=192.168.23.150
 
+[SNS:vars]
+ansible_ssh_private_key_file=/EIS_Ansible_CygWin/ssh_key/id_rsa
+ansible_user=root
 
+[SNS]
+node ansible_host=localhost

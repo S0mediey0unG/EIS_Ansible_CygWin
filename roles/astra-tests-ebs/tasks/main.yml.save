@@ -1,0 +1,89 @@
+---
+  - name: Check all port numbers are accessible from the TrustGate
+    wait_for:
+      host:        "{{ item.server }}"
+      port:        "{{ item.port }}"
+      state:       started
+      delay:       0
+      timeout:     1
+    ignore_errors: yes
+    loop:
+       - { server: '109.207.15.2',   port: '443' }
+       - { server: '10.112.132.254', port: '80' }
+       - { server: '10.112.132.253', port: '80' }
+       - { server: '172.20.3.12',    port: '7500' }
+       - { server: '172.20.3.12',    port: '21' }
+       - { server: '192.168.100.2',  port: '9443' }
+    when: inventory_hostname in ['astraPH1', 'astraKSH37']
+
+  - name: Check all host are accesible from EBS
+    wait_for:
+      host:        "{{ item.server }}"
+      port:        "{{ item.port }}"
+      state:       started
+      delay:       0
+      timeout:     1
+    ignore_errors: yes
+    loop:
+       - { server: '192.168.101.3',      port: '443' }  # TrustGate
+       - { server: '192.168.101.2',      port: '443' }  # IDS
+       - { server: '192.168.101.1',      port: '8080' } # HW1000
+       - { server: '192.168.101.50',     port: '443' }  # SSPT
+       - { server: '192.168.101.34',     port: '4443' } # TL
+    become: no
+    delegate_to: 127.0.0.1
+    when: inventory_hostname in ['astraPH1', 'astraKSH37']
+
+  - name: Create dir for logs /iitrust/tests
+    file:
+      path: /iitrust/tests
+      state: directory
+    ignore_errors: yes
+
+  - name: check.py
+    shell: cd /home/compadmin/distr;python3 check.py > /iitrust/tests/check_py.txt
+    ignore_errors: yes
+
+  - name: tg_failover
+    shell: journalctl --since '5 minutes ago' -u tg_failover > /iitrust/tests/jr_tg_failover.txt
+    ignore_errors: yes
+
+  - name: cluster_status
+    shell: docker exec -it services_rabbit_1 rabbitmqctl cluster_status > /iitrust/tests/cluster_status.txt
+    ignore_errors: yes
+    when: inventory_hostname in ['astraPH1', 'astraKSH37']
+
+  - name: list_queues
+    shell: docker exec -it services_rabbit_1 rabbitmqctl list_queues -p r502  > /iitrust/tests/list_queues.txt
+    ignore_errors: yes
+    when: inventory_hostname in ['astraPH1', 'astraKSH37']
+
+  - name: pg_control
+    shell: docker exec -it postgres_postgres_1 pg_controldata > /iitrust/tests/pg_control.txt
+    ignore_errors: yes
+    when: inventory_hostname in ['astraPH1_DB', 'astraKSH37_DB']
+
+  - name: iit_signer_status
+    shell: systemctl status iit_signer > /iitrust/tests/iit_signer_status.txt
+    ignore_errors: yes
+    when: inventory_hostname in ['astraPH1', 'astraKSH37']
+
+  - name: docker_ps_status
+    shell: docker ps > /iitrust/tests/docker_ps.txt
+    ignore_errors: yes
+
+  - name: GrayLog api request
+    shell: shell: wget --user=admin --password=admin 'http://{{ ansible_default_ipv4.address }}:9000/api/search/universal/relative?sort=timestamp:asc&limit=10000&query=timestamp:["2023-03-01 00:00:00.000" TO "2023-03-01 01:00:00.000"]' -O - -q | jq '.' > "/home/mobaxterm/LOGS_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}/{{ inventory_hostname }}/GrayLogApiRequest.txt"
+    delegate_to: 127.0.0.1
+    become: no
+    ignore_errors: yes
+
+  - name: Create a host-specific archive of selected logs
+    shell: "zip -r /iitrust/tests/{{ ansible_hostname }}.zip /iitrust/tests/{{ files_to_copy | join(' ') }}"
+
+  - name: copy logs
+    fetch:
+      src: "/iitrust/tests/{{ item  }}"
+      dest: /home/mobaxterm/Desktop/LOGS_{{ ansible_date_time.date  }}_{{ ansible_date_time.time  }}/{{ inventory_hostname }}/
+      flat: yes
+    loop: "{{ ansible_hostname }}.zip"

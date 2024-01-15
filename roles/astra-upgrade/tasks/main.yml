@@ -71,3 +71,8 @@
           var: results.stderr_lines
     when: status is changed
    
+  - name: unmount repo
+    mount:
+      path:    /home/{{ ansible_env.SUDO_USER }}/iso_m
+      state:   unmounted
+

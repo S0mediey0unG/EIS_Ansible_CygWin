@@ -1,0 +1,35 @@
+# playbook.yml
+  - name: Запуск интерактивного скрипта на удаленной машине
+    hosts: TrustGate
+    become: yes  # Если требуется повышение привилегий для выполнения
+    tasks:
+
+    - name: Выполнение команды с ожиданием интерактивного ввода
+      expect:
+        command: cd /home/iit/distr;python3 install.py -v  # Замените на вашу команду, требующую интерактивного ввода
+        responses:
+          "Input docker subnet [Example: 192.168.0.0/16]": "192.168.0.0/16\n"  # Ответ на вопрос о Docker subnet
+          "Use an external database? [Y/n]": "n\n"  # Ответ на вопрос об использовании внешней базы данных
+          "Need create cluster? [Y/n]": "n\n"  # Ответ на вопрос создания кластера
+          "DB User [default:g2g]:": "\n"  # Просто Enter без значения для запроса о пользователе базы данных
+          "DB Password: [default:11113333]:": "\n"  # Просто Enter без значения для запроса пароля
+          "SSL mode (disable, allow, require, verify-ca, verify-full):": "disable\n"  # Ответ на запрос режима SSL
+          "Create SSL crt? [Y/n]": "Y\n"  # Ответ на запрос создания SSL-сертификата
+          "Country Name (2 letter code) [AU]:": "\n"  # Ответ на запрос страны
+          "State or Province Name (full name) [Some-State]:": "\n"  # Ответ на запрос области или провинции
+          "Locality Name (eg, city) []:": "\n"  # Ответ на запрос населенного пункта
+          "Organization Name (eg, company) [Internet Widgits Pty Ltd]:": "\n"  # Ответ на запрос названия организации
+          "Organizational Unit Name (eg, section) []:": "\n"  # Ответ на запрос названия отдела
+          "Common Name (e.g. server FQDN or YOUR name) []:": "\n"  # Ответ на запрос общего имени
+          "Email Address []:": "\n"  # Ответ на запрос адреса электронной почты
+          "Use UZ1? [Y/n]": "Y\n"  # Ответ на запрос Use UZ1
+          "Use external CRL service? [Y/n]": "n\n"  # Ответ на запрос об использовании внешнего службы CRL
+          "Has proxy server? [Y/n]": "n\n"  # Ответ на запрос о наличии прокси-сервера
+          "Create superuser? [Y/n]": "Y\n"  # Ответ на запрос создания суперпользователя
+          "Имя пользователя:": "admin\n"  # Ответ на запрос имени пользователя
+          "Password:": "12345678aA12345678aA\n"  # Ответ на запрос пароля
+          # Добавьте другие ожидаемые вопросы и ответы по мере необходимости
+      register: command_output
+
+    - debug:
+        var: command_output.stdout  # Вывести вывод команды
