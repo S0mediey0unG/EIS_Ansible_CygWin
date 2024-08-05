@@ -1,0 +1,21 @@
+- name: Создание полного бэкапа Debian
+  hosts: TrustGate
+  become: true
+
+  tasks:
+    - name: Создание временной директории для бэкапа
+      tempfile:
+        state: directory
+      register: backup_dir
+
+    - name: Создание полного бэкапа с помощью rsync
+      command: rsync -aAXv --exclude={"/dev/*","/proc/*","/sys/*","/run/*","/mnt/*","/media/*","/lost+found"} --numeric-ids --delete --info=progress2 --max-size=50G --exclude="/tmp/*" / {{ backup_dir.path }}/
+
+    - name: Архивирование бэкапа
+      command: tar -I pigz -cf /home/{{ ansible_env.SUDO_USER }}/backup.tar.gz -C {{ backup_dir.path }} .
+
+    - name: Удаление временной директории
+      file:
+        path: "{{ backup_dir.path }}"
+        state: absent
+

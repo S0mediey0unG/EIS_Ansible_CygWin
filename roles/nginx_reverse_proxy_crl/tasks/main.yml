@@ -1,0 +1,68 @@
+---
+# tasks file for nginx_reverse_proxy_crl
+
+  - name: For Linux
+    block:
+      - name: Check and print OS type
+        debug: var=ansible_os_family
+
+      - name: Intsall NGINX for Astra OS family 
+        apt:
+          name: nginx
+          update_cache: yes
+        when: ansible_os_family == "Astra Linux (Smolensk)"
+
+      - name: Intsall NGINX for Debian OS family 
+        apt:
+          name: nginx
+          update_cache: yes
+        when: ansible_os_family == "Debian"
+
+      - name: Intsall NGINX for RedHut OS family 
+        yum:
+          name: nginx
+          update_cache: yes
+        when: ansible_os_family == "RedHat"
+
+      - name: Configure nginx.conf
+        template:
+          src: nginx.conf.j2
+          dest: /etc/nginx/nginx.conf
+
+      - name: Restart and enabled NGINX
+        service:
+          name:    nginx
+          state:   restarted
+          enabled: yes  
+    when: ansible_os_family != "Windows"
+ 
+
+  - name: Intsall NGINX for Windows OS family
+    block:
+      - name: Debug OS type
+        debug: var=ansible_os_family
+
+      - name: Install 7zip from choco repo
+        win_chocolatey:
+          name: 7zip
+          state: present    
+
+      - name: Install NGINX from choco repo
+        win_chocolatey:
+          name: nginx
+          version: 1.23.3
+          state: present
+       
+      - name: Configure NGINX
+        win_copy:
+          src: nginx.conf
+          dest: C:\tools\nginx-1.23.3\conf\nginx.conf
+          
+
+      - name: Restart a service
+        win_service:
+          name: nginx
+          state: restarted
+
+    when: ansible_os_family == "Windows"
+ 

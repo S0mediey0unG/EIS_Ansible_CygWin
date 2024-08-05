@@ -1,0 +1,78 @@
+---
+# tasks file for astra-upgrade
+
+  - name: Enabled SSH Service
+    service:
+      name: ssh
+      enabled: yes
+
+  - name: Creates directory /home/{{ ansible_env.SUDO_USER }}/iso for copy update image
+    file:
+      path:  /home/{{ ansible_env.SUDO_USER }}/iso
+      state: directory
+
+  - name: Creates directory /home/{{ ansible_env.SUDO_USER }}/iso_m for mount repo
+    file:
+      path:  /home/{{ ansible_env.SUDO_USER }}/iso_m
+      state: directory
+
+
+  - name: Copy Update {{ NAME_ISO_UPDATE_FILE }} to Astra
+    copy:
+      src:  "{{ NAME_ISO_UPDATE_FILE }}"
+      dest: /home/{{ ansible_env.SUDO_USER }}/iso
+      mode: 0777
+
+  - name: mount repo
+    mount:
+      src:     /home/{{ ansible_env.SUDO_USER }}/iso/{{ NAME_ISO_UPDATE_FILE }}
+      path:    /home/{{ ansible_env.SUDO_USER }}/iso_m
+      fstype:  iso9660
+      opts:    ro
+      state:   mounted
+
+  - name: Add specified repository into sources list
+    template:
+      src: sources.list.j2 # deb file:///home/{{ ansible_env.SUDO_USER }}/iso_m smolensk contrib main non-free
+      dest: /etc/apt/sources.list
+
+
+  - name: Update repository chache
+    apt:
+      update_cache: yes
+
+  - name: Upgrade the OS
+    apt:
+      upgrade: yes
+
+  - name: install and update Core Linux linux-5.10
+    apt:
+      name:  linux-5.10
+      state: latest
+    register: status  
+
+  - name: Core update
+    block:
+     
+      - name: Remove older core linux-4.15
+        apt:
+          pkg:
+          -      linux-4.15*
+          -      linux-image-4.15*
+          -      linux-headers-4.15*
+          state: absent
+
+      - name:     Update GRUB
+        shell:    update-grub2
+        register: results
+
+      - name: --- GRUB DEBUG ---
+        debug:
+          var: results.stderr_lines
+    when: status is changed
+   
+  - name: unmount repo
+    mount:
+      path:    /home/{{ ansible_env.SUDO_USER }}/iso_m
+      state:   unmounted
+

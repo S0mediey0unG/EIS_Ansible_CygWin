@@ -1,0 +1,5 @@
+*.iso
+*.run
+*.zip
+id_rsa*
+*.rpm

@@ -1,0 +1,78 @@
+---
+    - name: Создание пользователей secadmin и sysadmin с группой wheel
+      user:
+        name: "{{ item }}"
+        state: present
+        groups: wheel
+        createhome: yes
+      loop: 
+        - secadmin
+        - sysadmin
+
+    - name: Создание пользователя auditor
+      user:
+        name: auditor
+        state: present
+        createhome: yes
+
+    - name: Создание каталогов для загрузки дистрибутивов
+      file:
+        path: "/home/secadmin/iitrust"
+        state: directory
+        mode: '0755'
+
+    - name: Загрузка SNS и образа CentOS на сервер
+      copy:
+        src: "{{ item }}"
+        dest: /home/secadmin/iitrust/
+      loop:
+        - sn-lsp_1.12-334.el7.x86_64.rpm
+
+    - name: Создание файла lsplocal.repo
+      copy:
+        dest: "/etc/yum.repos.d/lsplocal.repo"
+        content: |
+          [snlsp-updates]
+          name=SN LSP 1.12 – updates
+          baseurl=https://download.securitycode.ru/snlsp/centos/7.9/1.12/release/
+          gpgcheck=0
+          enabled=1
+
+
+    - name: Очистка кэша заголовков репозиториев
+      command: "yum clean all"
+      become: yes
+
+#    - name: Обновление заголовков локальных репозиториев
+#      command: "yum update -y"
+#      become: yes
+
+    - name: Install epel-repo
+      yum:
+        name: epel-release
+        state: present
+
+    - name: Install kernel package
+      yum:
+        name: kernel-3.10.0-1160.66.1.el7.x86_64
+        state: present
+
+
+    - name: Удаление ядер
+      command: "yum remove -y $(rpm -qa | grep -v kernel-3.10.0-1160.66.1.el7.x86_64 | grep kernel-)"
+      become: yes
+      ignore_errors: yes
+
+
+   # - name: Reboot server
+   #   reboot:
+   #     reboot_timeout: 3600
+
+
+    - name: Установка Secret Net LSP
+      command: "yum install --nogpgcheck -y /home/secadmin/iitrust/sn-lsp_1.12-334.el7.x86_64.rpm"
+      become: yes
+
+    - name: Reboot server
+      reboot:
+        reboot_timeout: 3600

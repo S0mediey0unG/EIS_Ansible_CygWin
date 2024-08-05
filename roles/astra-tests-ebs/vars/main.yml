@@ -1,0 +1,23 @@
+---
+# vars file for astra-tests-ebs
+files_to_copy:
+      - check_py.txt
+      - iit_signer_status.txt
+      - docker_ps.txt
+      - jr_tg_failover.txt
+      - pg_control.txt
+      - list_queues.txt
+      - cluster_status.txt
+      - g2g.7z
+      - service.7z
+      - containers.7z
+      - dfi.txt
+      - dfh.txt
+      - route.txt
+      - uptime.txt
+      - vm.max_map_count.txt
+      - interfaces.txt
+
+hosts_to_delegate:
+  - astraPH1
+  - astraKSH37

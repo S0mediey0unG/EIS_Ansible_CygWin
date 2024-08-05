@@ -1,0 +1,9 @@
+---
+- name:   Upgrade OS Astra Linux 1.6
+  hosts:  TrustGate
+  become: yes
+
+
+  roles:
+    - astra-upgrade-1.7
+

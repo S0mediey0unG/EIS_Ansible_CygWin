@@ -1,0 +1,51 @@
+---
+# tasks file for nginx_reverse_proxy_crl
+  - name: Check and print OS type
+    debug: var=ansible_os_family
+
+  - name: Intsall NGINX for Astra OS family 
+    apt:
+      name: nginx
+      update_cache: yes
+      when: ansible_os_family == "Astra Linux (Smolensk)"
+
+  - name: Intsall NGINX for Debian OS family 
+    apt:
+      name: nginx
+      update_cache: yes
+      when: ansible_os_family == "Debian"
+
+  - name: Intsall NGINX for RedHut OS family 
+    yum:
+      name: nginx
+      update_cache: yes
+      when: ansible_os_family == "RedHat"
+  
+  - name: 213
+    block:
+      - name: cmd
+        win_shell: mkdir C:\Users\"LOGNAME"\temp
+
+      - name: Download nginx
+        win_get_url:
+         url:  https://nginx.org/download/nginx-1.22.1.zip
+         dest: C:\temp\nginx-1.22.1.zip
+
+      - name: Run a command under cmd
+        win_shell: tar.exe -xf nginx-1.20.2.zip
+        args:
+          executable: cmd.exe  
+    when: ansible_os_family == "Windows"
+
+
+  - name: Configure nginx.conf
+    template:
+      src: nginx.conf.j2
+      dest: /etc/nginx/nginx.conf
+
+  - name: Restart and enabled NGINX
+    service:
+      name:    nginx
+      state:   restarted
+      enabled: yes
+

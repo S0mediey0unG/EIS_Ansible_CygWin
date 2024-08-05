@@ -1,0 +1,12 @@
+---
+- name:   Check ports EBS, ESIA and SMEV from Astra-EBS
+  hosts:  TrustGate
+  gather_facts: true
+  become: yes
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+
+  roles:
+    - astra-tests-ebs
+
