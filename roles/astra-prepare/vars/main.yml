@@ -1,0 +1,16 @@
+---
+# roles/security/vars/main.yml
+ssh_params:
+  - { key: 'AddressFamily', value: 'inet' }
+  - { key: 'HostKey', value: '/etc/ssh/ssh_host_rsa_key' }
+  - { key: 'HostKey', value: '/etc/ssh/ssh_host_ecdsa_key' }
+  - { key: 'HostKey', value: '/etc/ssh/ssh_host_ed25519_key' }
+  - { key: 'Ciphers', value: 'aes128-ctr,aes192-ctr,aes256-ctr' }
+  - { key: 'HostKeyAlgorithms', value: 'ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,ssh-rsa' }
+  - { key: 'KexAlgorithms', value: 'diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha256' }
+  - { key: 'MACs', value: 'hmac-sha2-256,hmac-sha2-512,hmac-sha1' }
+  - { key: 'Protocol', value: '2' }
+  - { key: 'LoginGraceTime', value: '15s' }
+  - { key: 'PermitEmptyPasswords', value: 'no' }
+  - { key: 'PermitRootLogin', value: 'no' }
+  - { key: 'MaxAuthTries', value: '5' }

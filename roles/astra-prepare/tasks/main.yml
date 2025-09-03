@@ -1,0 +1,280 @@
+---
+# roles/security/tasks/main.yml
+- name: Сформировать udev-правила для сетевых интерфейсов
+  shell: |
+    ip -br -4 l | awk '{print $1}' | grep -v lo | while read iface; do
+      mac=$(cat /sys/class/net/$iface/address)
+      echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="'$mac'", ATTR{type}=="1", KERNEL=="eth*", NAME=="'$iface'"'
+    done
+  register: udev_rules
+
+- name: Создать файл udev с правилами
+  copy:
+    dest: /etc/udev/rules.d/user-udev.rules
+    content: "{{ udev_rules.stdout }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Проверка и установка pam_unix в /etc/pam.d/common-auth
+  lineinfile:
+    path: /etc/pam.d/common-auth
+    regexp: '^auth\s+\[success=1 default=ignore\]\s+pam_unix.so nullok_secure try_first_pass'
+    line: 'auth    [success=1 default=ignore]    pam_unix.so nullok_secure try_first_pass'
+    state: present
+    insertafter: BOF
+
+- name: Вставить pam_securetty.so в начало Primary блока
+  blockinfile:
+    path: /etc/pam.d/common-auth
+    marker: "# {mark} ANSIBLE pam_securetty"
+    insertafter: '^# here are the per-package modules \(the "Primary" block\)'
+    block: |
+      auth    required                        pam_securetty.so
+
+- name: Настройки отключения IPv6
+  blockinfile:
+    path: /etc/sysctl.conf
+    block: |
+      net.ipv6.conf.all.disable_ipv6 = 1
+      net.ipv6.conf.default.disable_ipv6 = 1
+      net.ipv6.conf.lo.disable_ipv6 = 1
+    marker: "# {mark} ANSIBLE: IPv6 Disable"
+
+- name: Применить настройки sysctl
+  command: sysctl -p
+
+- name: Расскомментировать строки HostKey
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#\s*HostKey\s+{{ item.value | regex_escape() }}'
+    line: 'HostKey {{ item.value }}'
+    state: present
+  loop: "{{ ssh_params }}"
+  when: item.key == 'HostKey'
+
+- name: Установить параметры SSH, кроме HostKey
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?{{ item.key }}\s+.*'
+    line: "{{ item.key }} {{ item.value }}"
+    state: present
+  loop: "{{ ssh_params }}"
+  when: item.key != 'HostKey'
+
+
+- name: Перезапуск SSH
+  shell: |
+    ssh-keygen -A
+    sshd -t && systemctl restart ssh
+
+- name: Создание пользователей
+  user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups }}"
+    append: yes
+    shell: /bin/bash
+    create_home: yes
+  loop:
+    - { name: secadmin, groups: 'astra-admin,astra-console,cdrom,plugdev,dialout,audio,video,dip,netdev,lpadmin' }
+    - { name: sysadmin, groups: 'astra-admin,astra-console,cdrom,plugdev,dialout,audio,video,dip,netdev,lpadmin' }
+    - { name: auditor,  groups: 'astra-console' }
+
+- name: Настройка политики пароля PAM
+  replace:
+    path: /etc/pam.d/common-password
+    regexp: 'pam_cracklib\.so.*'
+    replace: 'pam_cracklib.so retry=5 difok=3 enforce_for_root minlen=8 lcredit=-2 ucredit=-2 dcredit=-2 ocredit=-1 minclass=4 remember=3'
+
+- name: Настройка параметров /etc/login.defs
+  lineinfile:
+    path: /etc/login.defs
+    regexp: "^{{ item.key }}\\s+"
+    line: "{{ item.key }} {{ item.value }}"
+    state: present
+  loop:
+    - { key: "PASS_MAX_DAYS",  value: "90" }
+    - { key: "PASS_MIN_DAYS",  value: "0" }
+    - { key: "PASS_WARN_AGE",  value: "14" }
+    - { key: "LOGIN_TIMEOUT",  value: "1800" }
+
+- name: Ограничить число сессий пользователей
+  lineinfile:
+    path: /etc/security/limits.conf
+    regexp: "^{{ item.name }}\\s+-\\s+maxlogins"
+    line: "{{ item.name }} - maxlogins {{ item.max }}"
+    state: present
+  loop:
+    - { name: "secadmin", max: 3 }
+    - { name: "sysadmin", max: 3 }
+    - { name: "auditor",  max: 3 }
+
+- name: Установить TMOUT
+  lineinfile:
+    path: /etc/profile
+    line: 'TMOUT=900'
+    state: present
+
+- name: Сделать TMOUT readonly
+  lineinfile:
+    path: /etc/profile
+    line: 'readonly TMOUT'
+    insertafter: EOF
+
+- name: Экспортировать TMOUT
+  lineinfile:
+    path: /etc/profile
+    line: 'export TMOUT'
+    insertafter: EOF
+
+- name: Настроить аудит
+  command: useraud -o ocxudntligarphew:oxdntarph
+
+- name: Создать группу wheel
+  group:
+    name: wheel
+    state: present
+
+- name: Включить pam_wheel.so
+  lineinfile:
+    path: /etc/pam.d/su
+    regexp: '^#?auth\s+required\s+pam_wheel.so'
+    line: 'auth required pam_wheel.so use_uid'
+
+- name: Добавить пользователей в wheel
+  user:
+    name: "{{ item }}"
+    groups: wheel
+    append: yes
+  loop:
+    - secadmin
+    - sysadmin
+
+- name: Настроить права на конфиги
+  file:
+    path: "{{ item.path }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: /etc/passwd, mode: '0644' }
+    - { path: /etc/group,  mode: '0644' }
+    - { path: /etc/shadow, mode: '0600' }
+
+- name: Ограничить доступ к /etc/cron* директориям
+  file:
+    path: "{{ item }}"
+    mode: "0755"
+    recurse: no
+  with_fileglob:
+    - "/etc/cron*"
+  when: item is directory
+
+- name: Ограничить доступ к содержимому /etc/cron*/*
+  file:
+    path: "{{ item }}"
+    mode: "0644"
+  with_fileglob:
+    - "/etc/cron*/*"
+
+- name: Применить настройки sysctl
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  loop:
+    - { name: kernel.kptr_restrict, value: 2 }
+    - { name: net.core.bpf_jit_harden, value: 2 }
+    - { name: kernel.perf_event_paranoid, value: 3 }
+    - { name: kernel.kexec_load_disabled, value: 1 }
+    - { name: kernel.unprivileged_bpf_disabled, value: 1 }
+    - { name: dev.tty.ldisc_autoload, value: 0 }
+    - { name: fs.protected_fifos, value: 2 }
+    - { name: fs.protected_regular, value: 2 }
+
+- name: Применить настройки sysctl (повтор)
+  command: sysctl -p
+
+- name: Настроить grub
+  lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet net.ifnames=0 parsec.max_ilev=63 slab_nomerge iommu=force iommu.strict=1 iommu.passthrough=0 vsyscall=none debugfs=off"'
+    state: present
+
+- name: Обновить grub
+  command: update-grub
+
+- name: Хранить логи systemd постоянно
+  replace:
+    path: /etc/systemd/journald.conf
+    regexp: '^#?Storage=.*'
+    replace: 'Storage=persistent'
+
+- name: Создать /var/log/journal
+  file:
+    path: /var/log/journal
+    state: directory
+    mode: '0755'
+
+- name: Активировать журнал systemd
+  command: systemd-tmpfiles --create --prefix /var/log/journal
+
+- name: Установить rotate 1096 перед daily
+  replace:
+    path: /etc/logrotate.d/rsyslog
+    regexp: '(^/var/log/syslog\s*{(?:.|\n)*?)rotate\s+\d+'
+    replace: '\1rotate 1096'
+    backup: yes
+
+- name: Установить rotate 157 перед weekly
+  replace:
+    path: /etc/logrotate.d/rsyslog
+    regexp: '(^/var/log/mail\.info(?:.|\n)+?{(?:.|\n)+?)rotate\s+\d+'
+    replace: '\1rotate 157'
+    backup: yes
+
+- name: Очистить журналы старше 3 лет
+  command: journalctl --vacuum-time=3years
+
+- name: Очистить журналы >6GB
+  command: journalctl --vacuum-size=6G
+
+- name: Перезапустить systemd-journald
+  systemd:
+    name: systemd-journald
+    state: restarted
+
+- name: Получить имя исходного пользователя
+  set_fact:
+    real_user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
+
+- name: Добавить пути в /etc/afцick.conf
+  lineinfile:
+    path: /etc/afick.conf
+    line: "{{ item }}"
+    state: present
+    insertafter: EOF
+  loop:
+    - "/boot GOST"
+    - "/lib/modules PARSEC"
+    - "/etc/security PARSEC"
+    - "/etc/astra_license PARSEC"
+    - "etc/nsswitch PARSEC"
+    - "/etc/pam.d PARSEC"
+    - "/lib/x86_64-linux-gnu/security PARSEC"
+    - "/lib/security PARSEC"
+    - "/sbin PARSEC"
+    - "/etc/fstab PARSEC"
+    - "/usr/sbin PARSEC"
+    - "/etc/default/grub PARSEC"
+    - "/boot/grub/grub.cfg PARSEC"
+    - "/home/{{ ansible_env.SUDO_USER | default(ansible_user_id) }}/distr/libs/containers/config.json"
+
+- name: Новые суммы целостности afick
+  command: afick -u
+  register: afick_update
+  failed_when: afick_update.rc not in [0,2, 6, 10]
+
+- name: Проверка целостности afick
+  command: afick -k
+  register: afick_check
+  failed_when: afick_check.rc not in [0, 2]
