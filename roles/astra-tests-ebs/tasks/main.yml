@@ -47,7 +47,16 @@
     when: inventory_hostname in ['astraPH1', 'astraKSH37']
 
   - name: distr backup
-    shell: 7z a -r /iitrust/tests/distr.7z /home/compadmin/distr/* -xr'!*.zip' -xr'!*.deb' -xr'!install.log' -xr'!*.run' -xr'!*.bz2' -xr'!libs/*' -xr'!images/*'
+    shell: >
+      7z a -r /iitrust/tests/distr.7z /home/compadmin/distr/* 
+      -xr'!*.zip' 
+      -xr'!*.deb' 
+      -xr'!install.log' 
+      -xr'!*.run' 
+      -xr'!*.bz2' 
+      -xr'!libs/*' 
+      -xr'!images/*' 
+      -xr'!*/gar/*'
     ignore_errors: yes
 
   - name: tg_failover
@@ -106,10 +115,11 @@
   - name: Fetch GrayLog API request and save to file
     shell: >
       /opt/homebrew/bin/wget --user=admin --password=admin
-      --header="Content-type: application/json"
+      --header="Content-Type: application/json"
       --header="Accept: application/json"
-      'http://{{ ansible_default_ipv4.address }}:9000/api/search/universal/relative?sort=timestamp:asc&limit=10000&query=timestamp:["2023-03-01 00:00:00.000" TO "2030-03-01 01:00:00.000"]'
-      -O - -q | /opt/homebrew/bin/jq '.' > /Users/vadimkorneev/Desktop/LOGS_{{ ansible_date_time.date }}_{{ ansible_date_time.hour }}_{{ ansible_date_time.minute }}/{{ inventory_hostname }}/GrayLogApiRequest.txt
+      -O - -q
+      "http://{{ ansible_default_ipv4.address }}:9000/api/search/universal/absolute?query=*&from=2023-03-01T00:00:00.000Z&to=2030-03-01T01:00:00.000Z&limit=10000&sort=timestamp:asc"
+      | /opt/homebrew/bin/jq '.' > /Users/vadimkorneev/Desktop/LOGS_{{ ansible_date_time.date }}_{{ ansible_date_time.hour }}_{{ ansible_date_time.minute }}/{{ inventory_hostname }}/GrayLogApiRequest.txt
     delegate_to: 127.0.0.1
     become: no
     ignore_errors: yes
