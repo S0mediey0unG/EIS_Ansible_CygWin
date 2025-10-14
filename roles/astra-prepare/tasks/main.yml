@@ -247,7 +247,7 @@
   set_fact:
     real_user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
 
-- name: Добавить пути в /etc/afцick.conf
+- name: Добавить пути в /etc/afick.conf
   lineinfile:
     path: /etc/afick.conf
     line: "{{ item }}"

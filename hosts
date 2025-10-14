@@ -1,12 +1,13 @@
 [TrustGate:vars]
-ansible_ssh_private_key_file=/Users/vadimkorneev/EIS_Ansible_CygWin/ssh_key/id_rsa
-ansible_user=compadmin
+ansible_ssh_private_key_file=~/EIS_Ansible_CygWin/ssh_key/id_rsa
+ansible_user=hsm
 
 [TrustGate]
-astraPH1 ansible_host=192.168.101.3
-astraPH1_DB ansible_host=192.168.101.5 
-astraKSH37 ansible_host=192.168.102.3
-astraKSH37_DB ansible_host=192.168.102.5
+#astraPH1 ansible_host=192.168.101.3
+#astraPH1_DB ansible_host=192.168.101.5 
+#astraKSH37 ansible_host=192.168.102.3
+#astraKSH37_DB ansible_host=192.168.102.5
+test ansible_host=192.168.65.178
 
 #[NGINX_WINDOWS_SRV:vars]
 #remote_tmp="C:\Users\{{ LOGNAME }}\tmp"
@@ -33,3 +34,10 @@ nginx ansible_host=192.168.23.150
 
 #[SNS]
 #node ansible_host=localhost
+
+[TEST:vars]
+ansible_ssh_private_key_file=/Users/vadimkorneev/.ssh/id_rsa
+ansible_user=secadmin
+
+[TEST]
+TEST ansible_host=192.168.65.158
