@@ -114,12 +114,12 @@
 
   - name: Fetch GrayLog API request and save to file
     shell: >
-      /opt/homebrew/bin/wget --user=admin --password=admin
+      wget --user=admin --password=admin
       --header="Content-Type: application/json"
       --header="Accept: application/json"
       -O - -q
       "http://{{ ansible_default_ipv4.address }}:9000/api/search/universal/absolute?query=*&from=2023-03-01T00:00:00.000Z&to=2030-03-01T01:00:00.000Z&limit=10000&sort=timestamp:asc"
-      | /opt/homebrew/bin/jq '.' > /Users/vadimkorneev/Desktop/LOGS_{{ ansible_date_time.date }}_{{ ansible_date_time.hour }}_{{ ansible_date_time.minute }}/{{ inventory_hostname }}/GrayLogApiRequest.txt
+      | jq '.' > /Users/vadimkorneev/Desktop/LOGS_{{ ansible_date_time.date }}_{{ ansible_date_time.hour }}_{{ ansible_date_time.minute }}/{{ inventory_hostname }}/GrayLogApiRequest.txt
     delegate_to: 127.0.0.1
     become: no
     ignore_errors: yes
